@@ -1,0 +1,136 @@
+1.Calculate a Cumulative Percentage of Total Sales by Region
+WITH RegionalSales AS (
+    SELECT 
+        Region,
+        Order_Date,
+        Order_ID,
+        Amount,
+        SUM(Amount) OVER (PARTITION BY Region) AS Total_Sales,
+        SUM(Amount) OVER (PARTITION BY Region ORDER BY Order_Date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS Cumulative_Sales
+    FROM Sales
+),
+CumulativePercentage AS (
+    SELECT 
+        Region,
+        Order_Date,
+        Order_ID,
+        Amount,
+        Cumulative_Sales,
+        Total_Sales,
+        (Cumulative_Sales * 100.0) / Total_Sales AS Cumulative_Percentage
+    FROM RegionalSales
+)
+SELECT 
+    Region,
+    Order_Date,
+    Order_ID,
+    Amount,
+    Cumulative_Sales,
+    Total_Sales,
+    ROUND(Cumulative_Percentage, 2) AS Cumulative_Percentage
+FROM CumulativePercentage
+ORDER BY Region, Order_Date;
+
+2. Identify the First and Last Orders for Each Customer
+WITH CustomerOrders AS (
+    SELECT 
+        Customer_ID,
+        Order_ID,
+        Order_Date,
+        Amount,
+        ROW_NUMBER() OVER (PARTITION BY Customer_ID ORDER BY Order_Date ASC) AS Row_First,
+        ROW_NUMBER() OVER (PARTITION BY Customer_ID ORDER BY Order_Date DESC) AS Row_Last
+    FROM Orders
+),
+FirstOrders AS (
+    SELECT 
+        Customer_ID,
+        Order_ID AS First_Order_ID,
+        Order_Date AS First_Order_Date,
+        Amount AS First_Order_Amount
+    FROM CustomerOrders
+    WHERE Row_First = 1
+),
+LastOrders AS (
+    SELECT 
+        Customer_ID,
+        Order_ID AS Last_Order_ID,
+        Order_Date AS Last_Order_Date,
+        Amount AS Last_Order_Amount
+    FROM CustomerOrders
+    WHERE Row_Last = 1
+)
+SELECT 
+    f.Customer_ID,
+    f.First_Order_ID,
+    f.First_Order_Date,
+    f.First_Order_Amount,
+    l.Last_Order_ID,
+    l.Last_Order_Date,
+    l.Last_Order_Amount,
+    DATEDIFF(l.Last_Order_Date, f.First_Order_Date) AS Days_Between
+FROM FirstOrders f
+JOIN LastOrders l
+ON f.Customer_ID = l.Customer_ID;
+
+3. Create a Rolling 3-Month Sales Average
+WITH SalesData AS (
+    SELECT 
+        Region,
+        CONCAT(Month, ' ', Year) AS Month_Year,
+        Year,
+        CASE 
+            WHEN Month = 'January' THEN 1
+            WHEN Month = 'February' THEN 2
+            WHEN Month = 'March' THEN 3
+            WHEN Month = 'April' THEN 4
+            WHEN Month = 'May' THEN 5
+            WHEN Month = 'June' THEN 6
+            WHEN Month = 'July' THEN 7
+            WHEN Month = 'August' THEN 8
+            WHEN Month = 'September' THEN 9
+            WHEN Month = 'October' THEN 10
+            WHEN Month = 'November' THEN 11
+            WHEN Month = 'December' THEN 12
+        END AS Month_Num,
+        Sales
+    FROM Sales
+),
+RankedSales AS (
+    SELECT 
+        Region,
+        Month_Year,
+        Year,
+        Month_Num,
+        Sales,
+        ROW_NUMBER() OVER (PARTITION BY Region ORDER BY Year, Month_Num) AS Month_Rank
+    FROM SalesData
+)
+SELECT 
+    Region,
+    Month_Year,
+    Sales,
+    ROUND(AVG(Sales) OVER (
+        PARTITION BY Region 
+        ORDER BY Month_Rank 
+        ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+    ), 2) AS Rolling_3_Month_Avg
+FROM RankedSales
+ORDER BY Region, Month_Rank;
+
+4.Rank Customers by Spending but Exclude Orders Above $500
+WITH FilteredOrders AS (
+    SELECT 
+        Customer_ID,
+        SUM(Order_Amount) AS Total_Spending
+    FROM Orders
+    WHERE Order_Amount <= 500
+    GROUP BY Customer_ID
+)
+SELECT 
+    Customer_ID,
+    Total_Spending,
+    RANK() OVER (ORDER BY Total_Spending DESC) AS Spending_Rank
+FROM FilteredOrders;
+
+
