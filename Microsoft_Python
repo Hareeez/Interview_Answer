@@ -1,0 +1,57 @@
+1.Filtering Data Frame Based on Conditions:
+import pandas as pd
+data = {
+    'employee': ['John', 'Jane', 'Jim', 'Jill', 'Jack'],
+    'department': ['HR', 'IT', 'Finance', 'IT', 'HR'],
+    'salary': [50000, 60000, 70000, 65000, 55000]
+}
+df = pd.DataFrame(data)
+filtered_df = df[(df['department'] == 'IT') & (df['salary'] > 60000)]
+print(filtered_df)
+
+2.Renaming Columns:
+import pandas as pd
+data = {
+    'Product_ID': [101, 102, 103],
+    'Product_Name': ['Laptop', 'Phone', 'Tablet'],
+    'Product_Price': [1000, 800, 600]
+}
+df = pd.DataFrame(data)
+df.rename(columns={
+    'Product_ID': 'ID',
+    'Product_Name': 'Name',
+    'Product_Price': 'Price'
+}, inplace=True)
+print(df)
+
+3.Handling Missing Values:
+import pandas as pd
+data = {
+    'product': ['Laptop', 'Tablet', 'Phone', 'Monitor', 'Mouse'],
+    'price': [1000, 500, None, 150, None],
+    'stock': [50, 150, 100, 200, 300]
+}
+df = pd.DataFrame(data)
+
+average_price = df['price'].mean(skipna=True)  
+df['price'].fillna(average_price, inplace=True)
+df.dropna(subset=['price'], inplace=True)
+print(df)
+
+4.Creatig Extra Column:
+import pandas as pd
+file_path = 'path_to_your_file.xlsx'  # Replace with the actual file path
+df = pd.read_excel(file_path)
+
+city_to_state = {
+    'New York': 'New York',
+    'Los Angeles': 'California',
+    'Houston': 'Texas',
+    'Chicago': 'Illinois'
+}
+
+df['State'] = df['City'].map(city_to_state)
+print(df)
+output_path = 'updated_file.xlsx' 
+df.to_excel(output_path, index=False)
+
